@@ -1,0 +1,34 @@
+#!/bin/bash -l  
+# Use the current working directory
+#SBATCH -D ./
+# Use the current environment for this job.
+##SBATCH --export=ALL
+# Define job name
+#SBATCH -J TM_solver
+# Define a standard output file. When the job is running, %u will be replaced by user name,
+# %N will be replaced by the name of the node that runs the batch script, and %j will be replaced by job id number.
+#SBATCH -o ./SLURM_OUT/TM_solver.%u.%N.%j.out
+# Define a standard error file
+#SBATCH -e ./SLURM_OUT/TM_solver.%u.%N.%j.err
+# Request the partition
+#SBATCH -p nodes 
+# Request the number of nodes
+#SBATCH -N 1 
+# Request the total number of cores
+#SBATCH -n 48 
+# This asks for 0 days, 5 hour, 0 minutes and 0 seconds of time.
+#SBATCH -t 04:59:59
+# Specify memory
+#SBATCH --mem=1000000M
+
+module load julia/1.11.6
+
+export JULIA_NUM_THREADS=24
+export OPENBLAS_NUM_THREADS=24
+export MKL_NUM_THREADS=24
+export OMP_NUM_THREADS=24
+
+julia --project=./TMenv solve_cyclo_TM_thetao_example.jl  "../data/processed/cyclo_stationary/IPSL-CM6A-LR_r1i2p1f1_monthly" "_cntrl"
+julia --project=./TMenv solve_cyclo_TM_so_example.jl  "../data/processed/cyclo_stationary/IPSL-CM6A-LR_r1i2p1f1_monthly" "_cntrl"
+julia --project=./TMenv solve_cyclo_TM_agessc_example.jl  "../data/processed/cyclo_stationary/IPSL-CM6A-LR_r1i2p1f1_monthly" "_cntrl" 
+
