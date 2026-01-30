@@ -130,8 +130,11 @@ function LinearAlgebra.ldiv!(y::AbstractVector, Pl::CycloPreconditioner, x::Abst
     return y
 end
 
+matrix_type = Pardiso.REAL_SYM
+solver = MKLPardisoIterate(; nprocs, matrix_type)
+
 Plprob = LinearProblem(-Δt * M̄, ones(N))  # following Bardin et al. (M -> -M though)
-Plprob = init(Plprob, MKLPardisoIterate(; nprocs = nprocs), rtol = 1.0e-8)
+Plprob = init(Plprob, solver, rtol = 1.0e-8)
 Pl = CycloPreconditioner(Plprob)
 Pr = I
 precs = Returns((Pl, Pr))
@@ -145,7 +148,7 @@ precs_alt2 = Returns((Pl_alt2, Pr))
 
 ########################################################################
 
-# use static (annual mean) solution as initial guess 
+# use static (annual mean) solution as initial guess
 
 #The MUMPS solver handles the centered scheme case well
 MPI.Init()
@@ -170,8 +173,8 @@ ageinit3D = DimensionalData.rebuild(
 #define stepping functions
 function initstepprob(A)
     prob = LinearProblem(A, ones(N))
-    #TROUBLESHOOTING: is there another option besides MKLPardiso here?    
-    return init(prob, MKLPardisoIterate(; nprocs), rtol = 1.0e-8)
+    #TROUBLESHOOTING: is there another option besides MKLPardiso here?
+    return init(prob, solver, rtol = 1.0e-8)
 end
 
 stepprob = [initstepprob(I + δt * M) for M in Ms]
