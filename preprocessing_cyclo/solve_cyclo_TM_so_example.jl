@@ -20,9 +20,6 @@ import MUMPS
 
 #Adapted from TMIP-ACCESS solver scripts
 
-#NOTES: this setup currently works for upwind matrices, but not the centered scheme matrices
-## Attempts (or potential attempts) to stabilize the setup for the centered scheme are noted by TROUBLESHOOTING
-
 ########################################################################
 # # # # # # # # # # # # # SOLVE SO # # # # # # # # # # # # # # # #
 ########################################################################
@@ -90,15 +87,11 @@ end
 
 
 # Build matrices -- grab matrixes with exp_tag
-#TROUBLESHOOTING: try adding in a bit of noise ϵ to stabilize the centered case
-#ϵ = 1e-10
 @time "building Ms" Ms = [
     begin
             inputfile = joinpath(inputdir, "cyclo_matrix_month$m$exp_tag.jld2")
             @info "Loading matrices + metrics as $inputfile"
             T = load(inputfile)["T"]
-	    #n = size(T,1)
-	    #T += spdiagm(0 => fill(ϵ, n))
             T + Ω
         end
         for m in steps
@@ -139,7 +132,6 @@ Pl = CycloPreconditioner(Plprob)
 Pr = I
 precs = Returns((Pl, Pr))
 
-#TROUBLESHOOTING: try out alternative preconditioners that might be more stable for the centered scheme
 Pl_alt = Diagonal(1.0 ./ diag(I + Δt * M̄))
 precs_alt = Returns((Pl_alt, Pr))
 Pl_alt2 = ilu(I + Δt * M̄)
@@ -183,7 +175,6 @@ salinityinit3D = DimensionalData.rebuild(
 #define stepping functions
 function initstepprob(A, src)
     prob = LinearProblem(A, δt * src)
-    #TROUBLESHOOTING: is there another option besides MKLPardiso here?
     return init(prob, solver, rtol = 1.0e-8)
 end
 
@@ -245,7 +236,6 @@ nonlinearprob! = NonlinearProblem(f!, u0, p)
 
 
 @info "solve cyclo-stationary state"
-#TROUBLESHOOTING: other solver options here? How low can I let the tolerance go?
 @time sol! = solve(nonlinearprob!, NewtonRaphson(linsolve = KrylovJL_GMRES(precs = precs, rtol = 1.0e-10)); show_trace = Val(true), reltol = Inf, abstol = 1.0e-8norm(u0, Inf));
 
 @info "Check the RMS drift, should be order 10⁻¹¹‰ (1e-11 per thousands)"
