@@ -15,8 +15,6 @@ using LinearSolve
 using IncompleteLU
 import Pardiso
 using NonlinearSolve
-using MPI
-import MUMPS
 
 #Adapted from TMIP-ACCESS solver scripts
 
@@ -139,12 +137,8 @@ precs = Returns((Pl, Pr))
 thetao_mean = mean(thetaos)
 src = Ω * thetao_mean[wet3D]
 
-#The MUMPS solver handles the centered scheme case well
-MPI.Init()
-@time "initial state solve" u0 = MUMPS.solve(M̄, src)
+@time "initial state solve" u0 = solve(LinearProblem(M̄, src), solver, rtol = 1.0e-8).u
 @show norm(M̄ * u0 - src) / norm(src)
-MPI.Finalize()
-u0 = vec(u0)
 
 temperatureinit3D = DimensionalData.rebuild(
     volcello_ds["volcello"];

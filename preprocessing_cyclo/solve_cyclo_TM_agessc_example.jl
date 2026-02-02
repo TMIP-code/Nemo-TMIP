@@ -15,8 +15,6 @@ using LinearSolve
 using IncompleteLU
 import Pardiso
 using NonlinearSolve
-using MPI
-import MUMPS
 
 #Adapted from TMIP-ACCESS solver scripts
 
@@ -135,13 +133,8 @@ precs = Returns((Pl, Pr))
 ########################################################################
 
 # use static (annual mean) solution as initial guess
-
-#The MUMPS solver handles the centered scheme case well
-MPI.Init()
+@time "initial state solve" u0 = solve(LinearProblem(M̄, ones(N)), MKLPardisoIterate(; nprocs = nprocs), rtol = 1.0e-8).u
 @show norm(M̄ * u0 - ones(N)) / norm(ones(N))
-@show norm(M̄ * u0 - src) / norm(src)
-MPI.Finalize()
-u0 = vec(u0)
 
 ageinit3D = DimensionalData.rebuild(
     volcello_ds["volcello"];
