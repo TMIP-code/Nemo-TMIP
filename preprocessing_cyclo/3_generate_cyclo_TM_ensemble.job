@@ -1,0 +1,35 @@
+#!/bin/bash -l  
+# Use the current working directory
+#SBATCH -D ./
+# Use the current environment for this job.
+##SBATCH --export=ALL
+# Define job name
+#SBATCH -J TM_builder
+# Define a standard output file. When the job is running, %u will be replaced by user name,
+# %N will be replaced by the name of the node that runs the batch script, and %j will be replaced by job id number.
+#SBATCH -o ./SLURM_OUT/TM_builder.%u.%N.%j.out
+# Define a standard error file
+#SBATCH -e ./SLURM_OUT/TM_builder.%u.%N.%j.err
+# Request the partition
+#SBATCH -p nodes 
+# Request the number of nodes
+#SBATCH -N 1 
+# Request the total number of cores
+#SBATCH -n 1 
+# This asks for 0 days, 0 hour, 59 minutes and 59 seconds of time.
+#SBATCH -t 00:59:59
+# Specify memory
+#SBATCH --mem=30000M
+
+module load julia/1.11.6
+
+julia --project=./TMenv generate_mon_TM_ensemble.jl "../data/processed/cyclo_stationary/IPSL-CM6A-LR_r1i2p1f1_monthly" "_exp1" 100. 1e-5
+julia --project=./TMenv generate_mon_TM_ensemble.jl "../data/processed/cyclo_stationary/IPSL-CM6A-LR_r1i2p1f1_monthly" "_exp2" 300. 1e-5
+julia --project=./TMenv generate_mon_TM_ensemble.jl "../data/processed/cyclo_stationary/IPSL-CM6A-LR_r1i2p1f1_monthly" "_exp3" 600. 1e-5
+julia --project=./TMenv generate_mon_TM_ensemble.jl "../data/processed/cyclo_stationary/IPSL-CM6A-LR_r1i2p1f1_monthly" "_exp4" 100. 5e-6
+julia --project=./TMenv generate_mon_TM_ensemble.jl "../data/processed/cyclo_stationary/IPSL-CM6A-LR_r1i2p1f1_monthly" "_exp5" 300. 5e-6
+julia --project=./TMenv generate_mon_TM_ensemble.jl "../data/processed/cyclo_stationary/IPSL-CM6A-LR_r1i2p1f1_monthly" "_exp6" 600. 5e-6
+julia --project=./TMenv generate_mon_TM_ensemble.jl "../data/processed/cyclo_stationary/IPSL-CM6A-LR_r1i2p1f1_monthly" "_exp7" 100. 1e-6
+julia --project=./TMenv generate_mon_TM_ensemble.jl "../data/processed/cyclo_stationary/IPSL-CM6A-LR_r1i2p1f1_monthly" "_exp8" 300. 1e-6
+julia --project=./TMenv generate_mon_TM_ensemble.jl "../data/processed/cyclo_stationary/IPSL-CM6A-LR_r1i2p1f1_monthly" "_exp9" 600. 1e-6
+
