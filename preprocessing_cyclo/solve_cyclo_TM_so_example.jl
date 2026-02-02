@@ -25,7 +25,7 @@ using NonlinearSolve
 
 inputdir = ARGS[1] #path to input files
 exp_tag = ARGS[2] #experiment identifier so that outputs do not overwrite
-nprocs = 24
+nprocs = 48
 
 steps = collect(1:12)
 Nsteps = length(steps)
