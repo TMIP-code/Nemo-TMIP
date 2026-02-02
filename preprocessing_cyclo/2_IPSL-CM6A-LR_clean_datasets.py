@@ -48,7 +48,11 @@ for vr in vrs:
         
         if 'time' in ds.encoding.get('unlimited_dims', []):
             ds.encoding['unlimited_dims'].remove('time')
-        
+
+    #remove overlapping longitude columns and relabel longitude 0-360
+    ds = ds.isel(x =slice(1, 361))
+    ds['lon'] = np.mod(ds.lon, 360)
+    
     print(f'Saving {vr}...')
     ds.squeeze().to_netcdf(path + f'{vr}_.nc')
 
