@@ -12,7 +12,6 @@ using Format
 using Dates
 using FileIO
 using LinearSolve
-using IncompleteLU
 import Pardiso
 using NonlinearSolve
 
@@ -35,16 +34,6 @@ Nsteps = length(steps)
 
 volcello_ds = open_dataset(joinpath(inputdir, "volcello_.nc"))
 areacello_ds = open_dataset(joinpath(inputdir, "areacello_.nc"))
-
-# Build source variable for agessc
-agessc_ds = open_dataset(joinpath(inputdir, "agessc_.nc"))
-@time "building Ages" agesscs = [
-    begin
-            agessc = readcubedata(agessc_ds.agessc[month = At(month)])
-	    agessc
-        end
-        for month in steps
-]
 
 # Load fixed variables in memory
 areacello = readcubedata(areacello_ds.areacello)
@@ -148,7 +137,6 @@ ageinit3D = DimensionalData.rebuild(
 
 ########################################################################
 
-
 #define stepping functions
 function initstepprob(A)
     prob = LinearProblem(A, ones(N))
@@ -210,7 +198,7 @@ p = Params(δt)
 nonlinearprob! = NonlinearProblem(f!, u0, p)
 
 @info "solve cyclo-stationary state"
-@time sol! = solve(nonlinearprob!, NewtonRaphson(linsolve = KrylovJL_GMRES(precs = precs, rtol = 1.0e-10)); show_trace = Val(true), reltol = Inf, abstol = 1.0e-8norm(u0, Inf));
+@time sol! = solve(nonlinearprob!, NewtonRaphson(linsolve = KrylovJL_GMRES(precs = precs, rtol = 1.0e-10)); show_trace = Val(true), reltol = Inf, abstol = 1.0e-10norm(u0, Inf));
 
 @info "Check the RMS drift, should be order 10⁻¹¹‰ (1e-11 per thousands)"
 du = deepcopy(u0)

@@ -12,7 +12,6 @@ using Format
 using Dates
 using FileIO
 using LinearSolve
-using IncompleteLU
 import Pardiso
 using NonlinearSolve
 
@@ -130,12 +129,6 @@ Pl = CycloPreconditioner(Plprob)
 Pr = I
 precs = Returns((Pl, Pr))
 
-Pl_alt = Diagonal(1.0 ./ diag(I + Δt * M̄))
-precs_alt = Returns((Pl_alt, Pr))
-Pl_alt2 = ilu(I + Δt * M̄)
-precs_alt2 = Returns((Pl_alt2, Pr))
-
-
 ########################################################################
 
 # use static (annual mean) solution as initial guess
@@ -172,34 +165,34 @@ function initstepprob(A, src)
     return init(prob, solver, rtol = 1.0e-8)
 end
 
-function stepforwardonemonth!(du, u, p, m)
-    prob = stepprob[m]
-    prob.b = u .+ p.δt # xₘ₊₁ = Aₘ₊₁⁻¹ (xₘ + δt 1)
+function mystep!(du, u, p, m)
+    prob = p.stepprob[m]
+    prob.b = u .+ p.δt * p.src_cyclo[m] # xₘ₊₁ = Aₘ₊₁⁻¹ (xₘ + δt Ω x_srf)
     du .= solve!(prob).u
     return du
 end
 function jvpstep!(dv, v, p, m)
-    prob = stepprob[m]
+    prob = p.stepprob[m]
     prob.b = v # xₘ₊₁ = Aₘ₊₁⁻¹ (xₘ + δt 1)
     dv .= solve!(prob).u
     return dv
 end
-function stepforwardoneyear!(du, u, p)
+function steponeyear!(du, u, p)
     du .= u
-    for m in steps
-        stepforwardonemonth!(du, du, p, m)
+    for m in eachindex(p.stepprob)
+        mystep!(du, du, p, m)
     end
     return du
 end
 function jvponeyear!(dv, v, p)
     dv .= v
-    for m in steps
+    for m in eachindex(p.stepprob)
         jvpstep!(dv, dv, p, m)
     end
     return dv
 end
 function G!(du, u, p)
-    stepforwardoneyear!(du, u, p)
+    steponeyear!(du, u, p)
     du .-= u
     return du
 end
@@ -222,7 +215,6 @@ end
 
 Base.copy(p::Params) = Params(p.δt, copy(stepprob), p.src_cyclo)
 
-
 stepprob = [initstepprob(I + δt * Ms[m], src_cyclo[m]) for m in steps]
 p = Params(δt, stepprob, src_cyclo)
 
@@ -230,7 +222,7 @@ nonlinearprob! = NonlinearProblem(f!, u0, p)
 
 
 @info "solve cyclo-stationary state"
-@time sol! = solve(nonlinearprob!, NewtonRaphson(linsolve = KrylovJL_GMRES(precs = precs, rtol = 1.0e-10)); show_trace = Val(true), reltol = Inf, abstol = 1.0e-8norm(u0, Inf));
+@time sol! = solve(nonlinearprob!, NewtonRaphson(linsolve = KrylovJL_GMRES(precs = precs, rtol = 1.0e-10)); show_trace = Val(true), reltol = Inf, abstol = 1.0e-10norm(u0, Inf));
 
 @info "Check the RMS drift, should be order 10⁻¹¹‰ (1e-11 per thousands)"
 du = deepcopy(u0)
@@ -244,7 +236,7 @@ cube4D = reduce(
     (a, b) -> cat(a, b, dims = Ti),
     (
         begin
-                (m > 1) && stepforwardonemonth!(du, du, p, m)
+                (m > 1) && mystep!(du, du, p, m)
                 salinity3D = OceanTransportMatrixBuilder.as3D(du, wet3D)
                 salinity4D = reshape(salinity3D, (size(wet3D)..., 1))
                 axlist = (dims(volcello_ds["volcello"])..., dims(DimArray(ones(Nsteps), Ti(steps)))[1][m:m])
